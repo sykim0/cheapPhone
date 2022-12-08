@@ -1,0 +1,178 @@
+# Sys.setlocale("LC_ALL","C")
+# Sys.setlocale("LC_ALL","Korean")    ##run only one time
+library(shiny)
+library(xlsx)
+library(DT)
+rm(list = ls())
+
+ui <- fluidPage(
+  titlePanel("Recommand"),
+  sidebarLayout(
+    sidebarPanel(
+      textInput(inputId = "in_name",label = "Name:",value="kim"),
+      numericInput(inputId ="in_promotion",label = "Remain promotion:",value = "5"),
+      textInput(inputId = "in_phonenumber",label = "Phonenumber:",value="010-xxxx-xxxx"),
+      hr(),
+      hr(),
+      numericInput(inputId ="in_price",label = "Price:",value = "15000"),
+      numericInput(inputId ="in_message",label = "Message:",value = "200"),
+      numericInput(inputId ="in_call",label = "Call:",value = "500"),
+      numericInput(inputId ="in_data",label = "5G/LTE(GB):",value = "500"),
+      hr(),
+      hr(),
+      numericInput(inputId = "in_target",label = "Price that you want:",value = "20000"),
+      
+      actionButton("update","Load")
+      ,actionButton("go","View(After load)")
+      
+    ),
+    mainPanel(
+      h3(paste("Recommand for you")),
+      
+      tableOutput(outputId="out_target"),
+      dataTableOutput(outputId = "out_table")
+      
+      
+    )
+  )
+)
+
+
+
+############################
+server<-function(input,output){
+  
+  
+  
+  printTarget<-reactive({
+    if(input$update ==0){
+      if(input$in_name!="kim"){dir.create(paste0("C:/",input$in_name,"/"))
+        return()}}
+    
+    isolate({
+      input$update
+      customer<-data.frame(name=input$in_name,term=input$in_promotion,phonenumber=input$in_phonenumber,current_price=input$in_price,want=input$in_target)
+      write.xlsx(customer,file=paste0("C:/",input$in_name,"/information for ",input$in_name,".xlsx"),append=FALSE,col.names=FALSE,row.names=FALSE)
+      write.xlsx(info1(),file=paste0("C:/",input$in_name,"/Recommand for ",input$in_name,".xlsx"),append=FALSE,col.names=FALSE,row.names=FALSE)
+      
+    })
+  })
+  
+  
+  info1<-reactive({
+    extract_calling_plan<-function(){
+      key_number<-top()                      
+      int_key<-as.numeric(key_number)        
+      return_dataframe<-matrix(ncol=ncol(integration)-1,byrow = TRUE)
+      for(i in 1:10){
+        next_dataframe<-matrix(data=NA,nrow=1,ncol=ncol(integration)-1,byrow = TRUE)
+        for(j in 1:nrow(integration1)){      
+          if(int_key[i]==integration1[j,1])
+            
+            next_dataframe[1,1:10]<-integration[j,1:10]
+        }
+        
+        
+        return_dataframe<-rbind(return_dataframe,next_dataframe)
+      }
+      return(return_dataframe[2:11,])}
+    
+    
+    
+    
+    limit<-function(k){
+      upper_limit<-0;lower_limit=0;      
+      if(k>=10000){                                   
+        upper_limit<-k+10000;lower_limit<-k-10000     
+      }
+      else{
+        upper_limit<-k+10000;lower_limit<-0
+      }
+      return(c(upper_limit,lower_limit))            
+    }
+    
+    isolate({
+      price_ex<-function(){
+        weightprice<-data.frame(c(),stringsAsFactors = FALSE)         
+        limit_outcome<-limit(input$in_target)                                        
+        lower_limit<-limit_outcome[2];upper_limit<-limit_outcome[1]   
+        for (i in 1:nrow(scorematrix)){ 
+          if(scorematrix[i,4]>=lower_limit&&scorematrix[i,4]<=upper_limit){
+            weightprice[i,1]<-scorematrix[i,5]}
+        }                                                             
+        return(weightprice)                                           
+      }
+    })
+    top<-function(){
+      return(c(calling_plan_number[1:10]))
+    }
+    
+    
+    
+    
+    
+    integration<-read.csv(paste0("C:/cheapPhone/10.csv"),header=T)
+    preprocessing<-read.csv(paste0("C:/cheapPhone/10preprocessing.csv"),header=T)
+    
+    
+    data<-c(as.numeric(preprocessing[,2])) 
+    call<-c(as.numeric(preprocessing[,3]))
+    message<-c(as.numeric(preprocessing[,4]))
+    price<-c(as.numeric(preprocessing[,5]))
+    
+    a<-5;b<-2;c<-3
+    score<-matrix(a*data+b*call+c*message,ncol=1,byrow=F)
+    
+    
+    data_cus<-input$in_data;call_cus<-input$in_call;message_cus<-input$in_message;#price_cus<-input$in_price;
+    
+    isolate({
+      data_cusNu<-as.numeric(data_cus);call_cusNu<-as.numeric(call_cus);message_cusNu<-as.numeric(message_cus);#price_cusNu<-as.numeric(price_cus);
+      score_cus<<-a*data_cusNu+b*call_cusNu+c*message_cusNu
+    })
+    
+    scorematrix<-data.frame(data,call,message,price,score,stringsAsFactors = FALSE)
+    
+    targetscore<-data.frame(c(),stringsAsFactors = FALSE)    
+    targetscore<-abs(score_cus-price_ex())
+    
+    targetscore_plus<-data.frame(1:nrow(targetscore),targetscore[,1],stringsAsFactors = FALSE)
+    rmtargetscore<-as.matrix(targetscore_plus[complete.cases(targetscore_plus),])
+    testsort<-as.matrix(sort(rmtargetscore[,2]))
+    calling_plan_number<-rownames(testsort)
+    
+    integration1<-data.frame(1:nrow(integration),integration,stringsAsFactors = FALSE)
+    result<-extract_calling_plan()
+    
+    
+    return(result)
+    
+    
+  })
+  
+  
+  printScreen<-reactive({
+    if(input$go==0){return()}
+    isolate({
+      input$go
+      screen<-read.xlsx(paste0("C:/",input$in_name,"/Recommand for ",input$in_name,".xlsx"),1,header=FALSE)
+      colnames(screen)<-c("Company","Line","5G/LTE","Target","Data","Call","Message","Price","Agr","etc")
+      rownames(screen)<-c("1st","2nd","3rd",paste0(4:10,"th"))
+      screen
+    })
+  })
+  
+  
+  
+  
+  
+  
+  output$out_target<-renderTable({printTarget()})
+  output$out_table<-renderDT({printScreen()})
+}
+
+
+
+shinyApp(ui,server)
+
+
