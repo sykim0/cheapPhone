@@ -1,0 +1,61 @@
+library(dplyr)
+library(readr)
+library(dplyr)
+library(tidyr)
+library('stringr')
+
+options(max.print=1000000)
+a<-matrix(NA, nrow=890, ncol=5)
+#전처리 값 넣기 위한 행렬 생성
+
+
+library(readxl)
+Ntel <- read_excel("Ntel.xlsx")
+Ntel[2:5]
+
+for (i in 1:890) {
+  a[i,1]<-str_replace(gsub('GB|G|일|[+]','',(Ntel[i,5] %>% str_sub(start=1, end=4))),"MB|M","/1000")
+  #데이터에서 영단위 삭제, 특수문자 삭제, 메가바이트의 경우 단위값 계산을 위해 /1000
+  a[i,2]<-as.numeric(gsub('무제한','10000',gsub('분','',Ntel[i,6])))
+  #음성 변수에 문자열 분 삭제, 무제한의 경우 3사 기준 월 10000시간 을 무제한 요금으로 지정하고 있음
+  a[i,3]<-as.numeric(gsub('무제한','2000',gsub('건','',Ntel[i,7])))
+  # 문자 변수에 문자열 건 삭제, 무제한의 경우 3사 기준 월 2000건을 무제한 요금으로 지정하고 있음.
+  a[i,4]<-as.numeric(gsub(',','',gsub('원','',Ntel[i,8]))) 
+  #4번 가격에 통신료 추가
+  a[i,5]<-as.numeric(gsub('\\D', '',gsub('[[]','',gsub('LGU|SKT','7', Ntel[i,10] %>% str_sub(start=1, end=4)))))
+  #더보기란 중 프로모션 기간만을 필요로함. 대부분 프로모션 기간이 앞 쪽에 강조되어 있으므로 앞자리 추출 후 문자열 삭제
+} ;a
+
+data<-data.frame(a)
+#전처리값 데이터 프레임으로 전환
+names(data)<-c("data", "call", "Message", "price","dod")
+#행에 변수 네이밍
+data
+
+
+write.csv(data, file= "/Users/GACHON/Desktop/work/보고서/찐처리.csv")
+#저장
+
+
+
+
+
+
+
+
+#실험실
+Ntel[152,10] %>% str_sub(start=1, end=4)
+gsub('[[]','',gsub('LGU|SKT','7', Ntel[152,10] %>% str_sub(start=1, end=4)))
+gsub('\\D', '',gsub('[[]','',gsub('LGU|SKT','7', Ntel[152,10] %>% str_sub(start=1, end=4))))
+
+as.numeric(gsub(',','',gsub('원','',Ntel[1,8])))
+#통신료 숫자와 원 분류, 컴마와 숫자 띄어쓰기 분류
+as.numeric(gsub('분','',Ntel[2,6]))
+select(Ntel,데이터)
+Ntel[1,5]
+
+str_replace(gsub('GB|G|일|[+]','',(Ntel[i,5] %>% str_sub(start=1, end=4))),"MB|M","/1000")
+#데이터 추출 후 MB M 에 대하여 /1000 시행
+
+gsub('GB|G|일|[+]','',(Ntel[1,5] %>% str_sub(start=1, end=4)))
+
